@@ -1,0 +1,373 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+// Base class for items
+class Item {
+protected:
+    string name;
+    int id;
+    float price;
+
+public:
+    Item(string name, int id, float price) : name(name), id(id), price(price) {}
+
+    virtual void use() = 0; // Pure virtual function to be overridden by derived classes
+
+    string getName() const {
+        return name;
+    }
+
+    int getId() const {
+        return id;
+    }
+
+    float getPrice() const {
+        return price;
+    }
+};
+
+// Derived class for consumable items
+class Consumable : public Item {
+public:
+    Consumable(string name, int id, float price) : Item(name, id, price) {}
+
+    void use() override {
+        cout << "Using consumable item: " << name << endl;
+        // Add specific functionality for consumable items
+    }
+};
+
+// Derived class for unique items
+class Unique : public Item {
+public:
+    Unique(string name, int id, float price) : Item(name, id, price) {}
+
+    void use() override {
+        cout << "Using unique item: " << name << endl;
+        // Add specific functionality for unique items
+    }
+};
+
+// Derived class for stackable items
+class Stackable : public Item {
+private:
+    int quantity;
+
+public:
+    Stackable(string name, int id, float price, int quantity) : Item(name, id, price), quantity(quantity) {}
+
+    void use() override {
+        cout << "Using stackable item: " << name << " (" << quantity << " left)" << endl;
+        quantity--;
+        // Add specific functionality for stackable items
+    }
+
+    int getQuantity() const {
+        return quantity;
+    }
+};
+
+// Inventory class
+class Inventory {
+protected:
+    vector<Item*> items;
+
+public:
+    ~Inventory() {
+        for (Item* item : items) {
+            delete item;
+        }
+    }
+
+    void addItem(Item* item) {
+        items.push_back(item);
+    }
+
+    void removeItem(int id) {
+        for (auto it = items.begin(); it != items.end(); ++it) {
+            if ((*it)->getId() == id) {
+                delete *it;
+                items.erase(it);
+                break;
+            }
+        }
+    }
+
+    void sortItems() {
+        // Sort items based on their IDs
+        sort(items.begin(), items.end(), [](Item* a, Item* b) {
+            return a->getId() < b->getId();
+        });
+    }
+
+    Item* searchItemById(int id) {
+        for (Item* item : items) {
+            if (item->getId() == id) {
+                return item;
+            }
+        }
+        return nullptr;
+    }
+
+    Item* searchItemByName(string name) {
+        for (Item* item : items) {
+            if (item->getName() == name) {
+                return item;
+            }
+        }
+        return nullptr;
+    }
+
+    void displayItems() {
+        cout << "Inventory Items:" << endl;
+        for (Item* item : items) {
+            cout << " - Name: " << item->getName() << ", ID: " << item->getId() << ", Price: " << item->getPrice() << endl;
+        }
+    }
+};
+
+// Shop class derived from Inventory
+class Shop : public Inventory {
+public:
+    void buyItem(Inventory& inventory, int itemId) {
+        Item* item = searchItemById(itemId);
+        if (item != nullptr) {
+            inventory.addItem(item);
+            removeItem(itemId);
+            cout << "You bought: " << item->getName() << endl;
+        }
+    }
+
+    void sellItem(Inventory& inventory, int itemId) {
+        Item* item = inventory.searchItemById(itemId);
+        if (item != nullptr) {
+            addItem(item);
+            inventory.removeItem(itemId);
+            cout << "You sold: " << item->getName() << endl;
+        }
+    }
+};
+
+// Menu class for user interaction
+class Menu {
+private:
+    Inventory& inventory;
+    Shop& shop;
+
+public:
+    Menu(Inventory& inventory, Shop& shop) : inventory(inventory), shop(shop) {}
+
+    void displayMenu() {
+        cout << "------ Menu ------" << endl;
+        cout << "1. Add item to inventory" << endl;
+        cout << "2. Consume item" << endl;
+        cout << "3. Order inventory" << endl;
+        cout << "4. Search item by ID" << endl;
+        cout << "5. Search item by name" << endl;
+        cout << "6. Discard item" << endl;
+        cout << "7. Buy item" << endl;
+        cout << "8. Sell item" << endl;
+        cout << "9. Display inventory" << endl;
+        cout << "0. Exit" << endl;
+    }
+
+    void processChoice(int choice) {
+        switch (choice) {
+            case 1: {
+                addItemToInventory();
+                break;
+            }
+            case 2: {
+                consumeItem();
+                break;
+            }
+            case 3: {
+                orderInventory();
+                break;
+            }
+            case 4: {
+                searchItemById();
+                break;
+            }
+            case 5: {
+                searchItemByName();
+                break;
+            }
+            case 6: {
+                discardItem();
+                break;
+            }
+            case 7: {
+                buyItem();
+                break;
+            }
+            case 8: {
+                sellItem();
+                break;
+            }
+            case 9: {
+                displayInventory();
+                break;
+            }
+            case 0: {
+                cout << "Exiting..." << endl;
+                return;
+            }
+            default: {
+                cout << "Invalid choice. Try again." << endl;
+                break;
+            }
+        }
+        displayMenu();
+        int newChoice;
+        cin >> newChoice;
+        processChoice(newChoice);
+    }
+
+private:
+    void addItemToInventory() {
+        string name;
+        int id;
+        float price;
+        int typeChoice;
+
+        cout << "Enter item name: ";
+        cin >> name;
+        cout << "Enter item ID: ";
+        cin >> id;
+        cout << "Enter item price: ";
+        cin >> price;
+        cout << "Select item type:" << endl;
+        cout << "1. Consumable" << endl;
+        cout << "2. Unique" << endl;
+        cout << "3. Stackable" << endl;
+        cin >> typeChoice;
+
+        Item* item;
+        switch (typeChoice) {
+            case 1: {
+                item = new Consumable(name, id, price);
+                break;
+            }
+            case 2: {
+                item = new Unique(name, id, price);
+                break;
+            }
+            case 3: {
+                int quantity;
+                cout << "Enter item quantity: ";
+                cin >> quantity;
+                item = new Stackable(name, id, price, quantity);
+                break;
+            }
+            default: {
+                cout << "Invalid item type. Item not added." << endl;
+                return;
+            }
+        }
+
+        inventory.addItem(item);
+        cout << "Item added to inventory." << endl;
+    }
+
+    void consumeItem() {
+        int id;
+        cout << "Enter item ID to consume: ";
+        cin >> id;
+
+        Item* item = inventory.searchItemById(id);
+        if (item != nullptr) {
+            item->use();
+            if (dynamic_cast<Stackable*>(item) != nullptr) {
+                Stackable* stackableItem = dynamic_cast<Stackable*>(item);
+                if (stackableItem->getQuantity() == 0) {
+                    inventory.removeItem(id);
+                    delete item;
+                    cout << "Item consumed and removed from inventory." << endl;
+                }
+            }
+        } else {
+            cout << "Item not found in inventory." << endl;
+        }
+    }
+
+    void orderInventory() {
+        inventory.sortItems();
+        cout << "Inventory ordered by ID." << endl;
+    }
+
+    void searchItemById() {
+        int id;
+        cout << "Enter item ID to search: ";
+        cin >> id;
+
+        Item* item = inventory.searchItemById(id);
+        if (item != nullptr) {
+            cout << "Item found: " << item->getName() << ", Price: " << item->getPrice() << endl;
+        } else {
+            cout << "Item not found in inventory." << endl;
+        }
+    }
+
+    void searchItemByName() {
+        string name;
+        cout << "Enter item name to search: ";
+        cin >> name;
+
+        Item* item = inventory.searchItemByName(name);
+        if (item != nullptr) {
+            cout << "Item found: " << item->getName() << ", Price: " << item->getPrice() << endl;
+        } else {
+            cout << "Item not found in inventory." << endl;
+        }
+    }
+
+    void discardItem() {
+        int id;
+        cout << "Enter item ID to discard: ";
+        cin >> id;
+
+        inventory.removeItem(id);
+        cout << "Item discarded from inventory." << endl;
+    }
+
+    void buyItem() {
+        int itemId;
+        cout << "Enter item ID to buy: ";
+        cin >> itemId;
+
+        shop.buyItem(inventory, itemId);
+    }
+
+    void sellItem() {
+        int itemId;
+        cout << "Enter item ID to sell: ";
+        cin >> itemId;
+
+        shop.sellItem(inventory, itemId);
+    }
+
+    void displayInventory() {
+        inventory.displayItems();
+    }
+};
+
+int main() {
+    // Create inventory and shop objects
+    Inventory inventory;
+    Shop shop;
+
+    // Create menu object and display menu
+    Menu menu(inventory, shop);
+    menu.displayMenu();
+
+    // Process user choices
+    int choice;
+    cin >> choice;
+    menu.processChoice(choice);
+
+    return 0;
+}
